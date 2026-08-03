@@ -1,0 +1,15 @@
+{
+  "Acne": 0.4,
+  "Actinic_Keratosis": 0.45,
+  "Cancer_Piel": 0.7,
+  "Candidiasis": 0.6,
+  "Dano_Solar": 0.8,
+  "Eczema": 0.75,
+  "Infestaciones_Picaduras": 0.9,
+  "Lunares_Moles": 0.8,
+  "Piel_Normal": 0.3,
+  "Psoriasis": 0.7,
+  "Queratosis_Seborreica": 0.65,
+  "Tinea_Hongos": 0.7,
+  "Verrugas": 0.3
+}
