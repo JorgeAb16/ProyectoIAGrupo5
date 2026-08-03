@@ -19,7 +19,7 @@ load_dotenv()
 # ----------------------------------------------------------------------
 # CONFIGURACIÓN DEL MODELO
 # ----------------------------------------------------------------------
-IMG_SIZE = (224, 224)
+IMG_SIZE = (384,384)
 
 # Umbral de confianza experimental (Parte 16 del notebook): por debajo de esto,
 # se recomienda consultar a un dermatólogo en vez de mostrar un diagnóstico especifico.
@@ -32,7 +32,7 @@ CONFIDENCE_THRESHOLD = 0.70
 # fotos de piel legítimas (lesiones muy pigmentadas, mala iluminación, etc).
 PIEL_MIN_PORCENTAJE = 0.12
 
-GOOGLE_DRIVE_FILE_ID = "1HEFyoaMg77AMSfihagvEDOkKOKeFFvwb"
+GOOGLE_DRIVE_FILE_ID = "1TNW7LDpFmNE_Spg0kVXrYEnsBaZaEGAK"
 MODEL_PATH = "skin_disease_model.keras"
 CLASS_NAMES_PATH = "clases.json"
 
