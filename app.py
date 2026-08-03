@@ -21,9 +21,23 @@ load_dotenv()
 # ----------------------------------------------------------------------
 IMG_SIZE = (384, 384)
 
-# Umbral de confianza experimental (Parte 16 del notebook): por debajo de esto,
-# se recomienda consultar a un dermatólogo en vez de mostrar un diagnóstico especifico.
-CONFIDENCE_THRESHOLD = 0.70
+# Umbrales de confianza específicos por clase (reemplaza la constante global)
+# <--- CAMBIO: Se añade el diccionario de umbrales por clase
+CLASS_THRESHOLDS = {
+    "Acne": 0.4,
+    "Actinic_Keratosis": 0.45,
+    "Cancer_Piel": 0.7,
+    "Candidiasis": 0.6,
+    "Dano_Solar": 0.8,
+    "Eczema": 0.75,
+    "Infestaciones_Picaduras": 0.9,
+    "Lunares_Moles": 0.8,
+    "Piel_Normal": 0.3,
+    "Psoriasis": 0.7,
+    "Queratosis_Seborreica": 0.65,
+    "Tinea_Hongos": 0.7,
+    "Verrugas": 0.3
+}
 
 # Umbral de "porcentaje de piel visible" (heurística clásica de color, no el
 # modelo): si una foto tiene muy pocos píxeles con tono de piel, probablemente
@@ -993,8 +1007,13 @@ def main():
         top_idx = np.argsort(predicciones)[-top_k:][::-1]
         confianza_principal = float(predicciones[top_idx[0]])
         clase_top = class_names[top_idx[0]]
+
+        # <--- CAMBIO: Obtener el umbral específico para la clase predicha
+        umbral_clase = CLASS_THRESHOLDS.get(clase_top, 0.5)
+        umbral_piel_normal = CLASS_THRESHOLDS.get(CLASE_PIEL_NORMAL, 0.3)
+
         es_piel_normal = (
-            clase_top == CLASE_PIEL_NORMAL and confianza_principal >= CONFIDENCE_THRESHOLD
+            clase_top == CLASE_PIEL_NORMAL and confianza_principal >= umbral_piel_normal
         )
 
         with col2:
@@ -1010,11 +1029,12 @@ def main():
                     'todas formas.</div>',
                     unsafe_allow_html=True,
                 )
-            elif confianza_principal < CONFIDENCE_THRESHOLD:
+            elif confianza_principal < umbral_clase:   # <--- CAMBIO: comparar con umbral específico
                 st.markdown(
                     f'<div class="triage">⚠️ <strong>Confianza baja '
                     f'({confianza_principal * 100:.0f}%).</strong> Por debajo del umbral mínimo '
-                    f'({CONFIDENCE_THRESHOLD * 100:.0f}%) para un diagnóstico confiable. '
+                    f'({umbral_clase * 100:.0f}%) para un diagnóstico confiable de '
+                    f'<strong>{nombre_legible(clase_top)}</strong>. '   # <--- CAMBIO: se indica la clase
                     f'Se recomienda <strong>consultar directamente con un dermatólogo</strong>.</div>',
                     unsafe_allow_html=True,
                 )
