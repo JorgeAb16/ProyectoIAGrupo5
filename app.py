@@ -340,6 +340,37 @@ st.markdown(f"""
         color: {TEAL_DEEP} !important;
     }}
 
+    /* Selector "Subir archivo" / "Usar cámara" */
+    .upload-card [data-testid="stRadio"] {{ margin-bottom: 0.9rem; }}
+    .upload-card [data-testid="stRadio"] label {{
+        background: {SURFACE_ALT};
+        border: 1px solid {BORDER};
+        border-radius: 999px;
+        padding: 0.3rem 0.9rem !important;
+        margin-right: 0.4rem;
+        transition: border-color 0.15s ease, background 0.15s ease;
+    }}
+    .upload-card [data-testid="stRadio"] label:has(input:checked) {{
+        background: {TEAL_TINT};
+        border-color: {TEAL};
+    }}
+    .upload-card [data-testid="stRadio"] [role="radiogroup"] {{ gap: 0.3rem; }}
+
+    /* Vista de cámara, mismo lenguaje visual que el dropzone de archivos */
+    [data-testid="stCameraInput"] {{
+        border: 1.5px dashed #A9CDC3 !important;
+        border-radius: 14px !important;
+        padding: 0.6rem !important;
+        background: {SURFACE_ALT} !important;
+    }}
+    [data-testid="stCameraInput"] video,
+    [data-testid="stCameraInput"] img {{ border-radius: 10px !important; }}
+    [data-testid="stCameraInput"] button {{
+        border-radius: 8px !important;
+        border-color: {TEAL} !important;
+        color: {TEAL_DEEP} !important;
+    }}
+
     .empty-state {{
         background: {SURFACE};
         border: 1px dashed {BORDER};
@@ -908,15 +939,31 @@ def main():
     st.markdown(
         '<div class="upload-card-head">'
         '<span class="upload-card-title">Sube una imagen de la lesión</span>'
-        '<span class="upload-card-hint">Formatos JPG, JPEG o PNG</span>'
+        '<span class="upload-card-hint" id="upload-hint">Formatos JPG, JPEG o PNG</span>'
         '</div>',
         unsafe_allow_html=True,
     )
-    archivo = st.file_uploader(
-        "Arrastra o selecciona una imagen",
-        type=["jpg", "jpeg", "png"],
+
+    modo_entrada = st.radio(
+        "Fuente de la imagen",
+        options=["Subir archivo", "Usar cámara"],
+        horizontal=True,
         label_visibility="collapsed",
     )
+
+    if modo_entrada == "Subir archivo":
+        archivo = st.file_uploader(
+            "Arrastra o selecciona una imagen",
+            type=["jpg", "jpeg", "png"],
+            label_visibility="collapsed",
+        )
+    else:
+        st.caption("Se te pedirá permiso del navegador para usar la cámara.")
+        archivo = st.camera_input(
+            "Toma una foto de la lesión",
+            label_visibility="collapsed",
+        )
+
     st.markdown('</div>', unsafe_allow_html=True)
 
     if archivo is not None:
