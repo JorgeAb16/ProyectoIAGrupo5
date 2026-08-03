@@ -21,16 +21,9 @@ load_dotenv()
 # ----------------------------------------------------------------------
 IMG_SIZE = (384, 384)
 
-# Umbrales de confianza POR CLASE (PARTE 16 del notebook: cada clase tiene su
-# propio punto de corte óptimo, calculado maximizando F1 por clase sobre el
-# set de validación). Reemplaza al umbral único de 0.70 que se usaba antes.
-# Por debajo del umbral de la clase detectada, se recomienda consultar a un
-# dermatólogo en vez de mostrar el diagnóstico como confiable.
-THRESHOLDS_PATH = "thresholds_por_clase_efficientnetv2s.json"
-
-# Umbral de respaldo, usado únicamente si una clase no aparece en el JSON
-# (por ejemplo, si agregas una clase nueva y olvidas recalcular sus umbrales).
-UMBRAL_CONFIANZA_DEFAULT = 0.70
+# Umbral de confianza experimental (Parte 16 del notebook): por debajo de esto,
+# se recomienda consultar a un dermatólogo en vez de mostrar un diagnóstico especifico.
+CONFIDENCE_THRESHOLD = 0.70
 
 # Umbral de "porcentaje de piel visible" (heurística clásica de color, no el
 # modelo): si una foto tiene muy pocos píxeles con tono de piel, probablemente
@@ -733,14 +726,6 @@ def cargar_modelo():
     with open(CLASS_NAMES_PATH, "r", encoding="utf-8") as f:
         clases = json.load(f)
 
-    # Umbrales por clase: si el archivo no existe, se sigue funcionando con
-    # el umbral de respaldo para todas las clases (no rompe la app).
-    try:
-        with open(THRESHOLDS_PATH, "r", encoding="utf-8") as f:
-            umbrales = json.load(f)
-    except FileNotFoundError:
-        umbrales = {}
-
     # Grad-CAM es opcional: si la arquitectura cargada no coincide con lo
     # esperado (base EfficientNetV2S + 5 capas de clasificación), la app
     # sigue funcionando normal, solo sin la explicación visual.
@@ -750,13 +735,7 @@ def cargar_modelo():
     except Exception:
         base_model, ultima_capa_conv = None, None
 
-    return modelo, clases, base_model, ultima_capa_conv, umbrales
-
-
-def obtener_umbral(umbrales: dict, clase: str) -> float:
-    """Umbral de confianza específico de la clase; si no está en el JSON,
-    usa el umbral de respaldo general."""
-    return float(umbrales.get(clase, UMBRAL_CONFIANZA_DEFAULT))
+    return modelo, clases, base_model, ultima_capa_conv
 
 
 def preprocesar_imagen(imagen_pil):
