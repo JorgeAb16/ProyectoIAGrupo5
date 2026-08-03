@@ -1,1 +1,1 @@
-# ProyectoIAGrupo5
+# ProyectoIADetecci-nEnfermedadesPiel
