@@ -19,7 +19,7 @@ load_dotenv()
 # ----------------------------------------------------------------------
 # CONFIGURACIÓN DEL MODELO
 # ----------------------------------------------------------------------
-IMG_SIZE = (384,384)
+IMG_SIZE = (384, 384)
 
 # Umbral de confianza experimental (Parte 16 del notebook): por debajo de esto,
 # se recomienda consultar a un dermatólogo en vez de mostrar un diagnóstico especifico.
@@ -32,7 +32,7 @@ CONFIDENCE_THRESHOLD = 0.70
 # fotos de piel legítimas (lesiones muy pigmentadas, mala iluminación, etc).
 PIEL_MIN_PORCENTAJE = 0.12
 
-GOOGLE_DRIVE_FILE_ID = "1TNW7LDpFmNE_Spg0kVXrYEnsBaZaEGAK"
+GOOGLE_DRIVE_FILE_ID = "1DdNyswDjGhUCIxmA6-Q9HZyf37xCWmva"
 MODEL_PATH = "skin_disease_model.keras"
 CLASS_NAMES_PATH = "clases.json"
 
@@ -74,11 +74,17 @@ LABELS_ES = {
     "Eczema": "Eccema",
     "Infestaciones_Picaduras": "Infestaciones y picaduras",
     "Lunares_Moles": "Lunares (nevos)",
+    "Piel_Normal": "Piel normal / sin hallazgos",
     "Psoriasis": "Psoriasis",
     "Queratosis_Seborreica": "Queratosis seborreica",
     "Tinea_Hongos": "Tiña / hongos",
     "Verrugas": "Verrugas",
 }
+
+# Nombre exacto de la clase "sin hallazgos" tal como aparece en clases.json,
+# usado para identificar cuándo el modelo predice piel normal en vez de
+# inferirlo por heurística.
+CLASE_PIEL_NORMAL = "Piel_Normal"
 
 
 def nombre_legible(clase_original: str) -> str:
@@ -459,6 +465,16 @@ st.markdown(f"""
         font-size: 0.92rem;
         line-height: 1.5;
     }}
+    .piel-normal {{
+        background: {TEAL_TINT};
+        border-left: 4px solid {TEAL};
+        border-radius: 10px;
+        padding: 0.95rem 1.15rem;
+        color: {TEAL_DEEP};
+        margin-bottom: 1rem;
+        font-size: 0.92rem;
+        line-height: 1.5;
+    }}
     .disclaimer {{
         background: {SURFACE_ALT};
         border-left: 4px solid {TEAL};
@@ -739,34 +755,61 @@ def obtener_cliente_hf():
     return InferenceClient(api_key=token, provider="auto")
 
 
-def construir_instruccion_sistema(clase_detectada: str, confianza: float) -> str:
+def construir_instruccion_sistema(clase_detectada: str, confianza: float, es_piel_normal: bool = False) -> str:
     """
     Instrucción de sistema para el agente: se le informa la afección
     detectada por el modelo de visión, y se le pide comportarse como un
-    asistente educativo, no como un médico.
+    asistente educativo que da recomendaciones de cuidado concretas,
+    no como un médico ni como un bot que solo repite "ve al doctor".
     """
+    if es_piel_normal:
+        contexto_deteccion = (
+            f"El modelo de visión por computadora analizó una imagen y la clasificó como "
+            f"'{nombre_legible(CLASE_PIEL_NORMAL)}' con un {confianza * 100:.0f}% de confianza "
+            "(no encontró señales de ninguna de las condiciones que reconoce).\n\n"
+        )
+    else:
+        contexto_deteccion = (
+            f"El modelo de visión por computadora analizó una imagen y detectó, "
+            f"como diagnóstico diferencial más probable, "
+            f"'{nombre_legible(clase_detectada)}' con un {confianza * 100:.0f}% "
+            "de confianza.\n\n"
+        )
+
     return (
         "Eres un asistente educativo de salud de la piel, integrado en "
         "DermIA Honduras, una herramienta de análisis preliminar de "
         "imágenes dermatológicas orientada al contexto hondureño (clima "
-        "tropical, alta radiación UV).\n\n"
-        f"El modelo de visión por computadora analizó una imagen y detectó, "
-        f"como diagnóstico diferencial más probable, "
-        f"'{nombre_legible(clase_detectada)}' con un {confianza * 100:.0f}% "
-        "de confianza.\n\n"
-        "Tu función es responder en español las preguntas del usuario sobre "
-        "esta afección: qué es, causas comunes, síntomas típicos, cuidados "
-        "generales y cuándo se recomienda acudir a un dermatólogo. "
-        "Responde de forma clara, breve y profesional.\n\n"
-        "Reglas importantes:\n"
-        "- NUNCA confirmes un diagnóstico definitivo: este es un resultado "
-        "preliminar generado por IA, no un diagnóstico médico.\n"
-        "- Recuerda al usuario, cuando sea pertinente, que debe consultar a "
-        "un dermatólogo para una evaluación real.\n"
-        "- No recomiendes medicamentos ni dosis específicas.\n"
-        "- Si te preguntan algo fuera del tema de la piel o la afección "
-        "detectada, puedes responder brevemente pero reorienta la "
-        "conversación hacia el propósito de la herramienta."
+        "tropical, alta radiación UV, alta exposición solar).\n\n"
+        f"{contexto_deteccion}"
+        "Tu función es responder en español las preguntas del usuario sobre este resultado, "
+        "dando información realmente útil y concreta — no solo remitirlo al médico. "
+        "Para cada pregunta, cuando aplique, incluye:\n"
+        "- Qué es la condición y por qué ocurre (causas y factores de riesgo comunes, "
+        "incluyendo los relevantes al clima tropical hondureño cuando corresponda: sudoración, "
+        "humedad, radiación UV, etc.).\n"
+        "- Cuidados generales concretos y accionables: rutina de limpieza apropiada, tipo de "
+        "productos a buscar o evitar (por ejemplo 'no comedogénico', 'sin fragancia', "
+        "'con óxido de zinc'), hábitos de protección solar, cambios de higiene o de hábitos, "
+        "y qué evitar (rascar, exprimir, exponerse al sol sin protección, etc.).\n"
+        "- Señales de alarma específicas de ESA condición que justifican ir a un dermatólogo "
+        "pronto (por ejemplo: cambios de tamaño/color/forma en un lunar, sangrado, dolor "
+        "creciente, fiebre, falta de mejora tras varias semanas de cuidado en casa) — en vez "
+        "de recomendar la consulta como respuesta genérica a todo.\n\n"
+        "Sé específico y práctico, como lo sería un buen folleto educativo de salud, no evasivo. "
+        "Responde de forma clara, organizada (usa viñetas cuando ayude) y profesional, sin ser "
+        "excesivamente largo.\n\n"
+        "Reglas importantes (no negociables):\n"
+        "- NUNCA confirmes un diagnóstico definitivo, ni confirmes con certeza que la piel está "
+        "sana: dilo como lo que es, un resultado preliminar de un modelo de IA.\n"
+        "- NUNCA recomiendes medicamentos con receta, dosis, ni nombres de fármacos específicos "
+        "(puedes mencionar categorías generales de venta libre, como 'protector solar SPF 30+' "
+        "o 'humectante sin fragancia', sin recetar nada).\n"
+        "- Menciona acudir a un dermatólogo cuando exista una señal de alarma real para esa "
+        "condición, cuando el usuario lo pida explícitamente, o al cierre si la condición lo "
+        "amerita — no la repitas como muletilla en cada respuesta.\n"
+        "- Si te preguntan algo fuera del tema de la piel o la afección detectada, responde "
+        "brevemente pero reorienta la conversación hacia el propósito de la herramienta."
     )
 
 
@@ -902,11 +945,25 @@ def main():
 
         top_idx = np.argsort(predicciones)[-top_k:][::-1]
         confianza_principal = float(predicciones[top_idx[0]])
+        clase_top = class_names[top_idx[0]]
+        es_piel_normal = (
+            clase_top == CLASE_PIEL_NORMAL and confianza_principal >= CONFIDENCE_THRESHOLD
+        )
 
         with col2:
             st.markdown('<div class="eyebrow">Resultado</div>', unsafe_allow_html=True)
 
-            if confianza_principal < CONFIDENCE_THRESHOLD:
+            if es_piel_normal:
+                st.markdown(
+                    f'<div class="piel-normal">🌿 <strong>No se detectaron hallazgos relevantes '
+                    f'({confianza_principal * 100:.0f}% de confianza).</strong> El modelo clasificó '
+                    'esta imagen como piel sin señales de las condiciones que reconoce. Esto '
+                    '<strong>no reemplaza una revisión médica</strong> — si notas cambios, '
+                    'crecimiento, sangrado o algo que te preocupe, consulta a un dermatólogo de '
+                    'todas formas.</div>',
+                    unsafe_allow_html=True,
+                )
+            elif confianza_principal < CONFIDENCE_THRESHOLD:
                 st.markdown(
                     f'<div class="triage">⚠️ <strong>Confianza baja '
                     f'({confianza_principal * 100:.0f}%).</strong> Por debajo del umbral mínimo '
@@ -958,14 +1015,16 @@ def main():
             unsafe_allow_html=True,
         )
 
-        clase_principal = class_names[top_idx[0]]
+        clase_principal = clase_top
 
         if st.session_state.get("clase_activa") != clase_principal:
             st.session_state["clase_activa"] = clase_principal
             st.session_state["mensajes_chat"] = [
                 {
                     "role": "system",
-                    "content": construir_instruccion_sistema(clase_principal, confianza_principal),
+                    "content": construir_instruccion_sistema(
+                        clase_principal, confianza_principal, es_piel_normal
+                    ),
                 }
             ]
 
